@@ -1,0 +1,128 @@
+name: Build Warung Endog Yati APK
+
+# Cara pakai (lihat langkah lengkap di README.md):
+# 1. Unggah seluruh isi folder project ini ke sebuah repository GitHub.
+# 2. Buka tab "Actions" di repo tsb. Workflow ini otomatis jalan setiap push
+#    ke branch main, atau klik "Run workflow" untuk menjalankan manual.
+# 3. Tunggu ±5-10 menit sampai selesai (centang hijau), lalu buka run
+#    tersebut -> bagian "Artifacts" di bawah -> unduh "Warung-Endog-Yati-apk".
+#
+# APK RELEASE selalu berhasil dibuat, bahkan tanpa konfigurasi tambahan:
+# - Jika Anda BELUM mengisi secret keystore -> APK release ditandatangani
+#   dengan debug key bawaan. Tetap 100% bisa diinstall & dipakai sehari-hari
+#   di HP Android, hanya belum layak untuk dipublikasikan ke Play Store.
+# - Jika Anda SUDAH mengisi secret ANDROID_KEYSTORE_BASE64,
+#   KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD (Settings > Secrets and
+#   variables > Actions), APK release otomatis ditandatangani dengan
+#   keystore Anda sendiri -> siap dibagikan/dipublikasikan.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build web app (Vite)
+        run: npm run build
+
+      - name: Add Android platform
+        run: npx cap add android
+
+      - name: Generate app icons & splash from official logo
+        run: npx capacitor-assets generate --android
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      # Selalu sediakan debug keystore lebih dulu, supaya build release
+      # tetap bisa ditandatangani (fallback) walau secret belum diisi.
+      - name: Pastikan debug keystore tersedia
+        run: |
+          mkdir -p ~/.android
+          if [ ! -f ~/.android/debug.keystore ]; then
+            keytool -genkeypair -v -keystore ~/.android/debug.keystore \
+              -storepass android -alias androiddebugkey -keypass android \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Warung Endog Yati,O=Warung Endog Yati,C=ID"
+          fi
+
+      - name: Siapkan konfigurasi signing release
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -e
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "Secret keystore ditemukan -> APK release akan ditandatangani dengan keystore Anda sendiri."
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
+            echo "RELEASE_KEYSTORE_PATH=$(pwd)/android/app/release.keystore" >> "$GITHUB_ENV"
+            echo "RELEASE_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+            echo "RELEASE_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
+            echo "RELEASE_KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
+          else
+            echo "Secret keystore belum diisi -> APK release memakai debug key bawaan (tetap bisa diinstall & dipakai)."
+          fi
+          cat >> android/app/build.gradle <<'GRADLE_EOF'
+
+          android {
+              signingConfigs {
+                  release {
+                      def ksPath = System.getenv("RELEASE_KEYSTORE_PATH")
+                      def home = System.getProperty("user.home")
+                      storeFile ksPath ? file(ksPath) : file("${home}/.android/debug.keystore")
+                      storePassword System.getenv("RELEASE_KEYSTORE_PASSWORD") ?: "android"
+                      keyAlias System.getenv("RELEASE_KEY_ALIAS") ?: "androiddebugkey"
+                      keyPassword System.getenv("RELEASE_KEY_PASSWORD") ?: "android"
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                  }
+              }
+          }
+          GRADLE_EOF
+
+      - name: Build APK release
+        run: cd android && chmod +x ./gradlew && ./gradlew assembleRelease --stacktrace
+
+      - name: Build APK debug (opsional, untuk tes cepat)
+        run: cd android && ./gradlew assembleDebug
+
+      - name: Kumpulkan hasil APK
+        run: |
+          mkdir -p out
+          cp android/app/build/outputs/apk/release/app-release.apk out/Warung-Endog-Yati.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk out/Warung-Endog-Yati-debug.apk
+
+      - name: Upload APK ke Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Warung-Endog-Yati-apk
+          path: out/*.apk
+          if-no-files-found: error
