@@ -1,0 +1,26 @@
+Gunakan project ini sebagai dasar aplikasi WARUNG ENDOG YATI.
+
+Tugas utama:
+1. Periksa seluruh source code.
+2. Pertahankan logo `public/logo-warung-endog-yati.png` sebagai identitas resmi aplikasi.
+3. Lengkapi fitur Kasir, Mini ATM, Saldo Layanan, Pulsa & Digital, Kas, Riwayat, Produk, Laporan, Backup/Restore.
+4. Pastikan aplikasi offline-first dan data lokal tidak hilang saat aplikasi ditutup.
+5. Integrasikan Cloudflare Workers + D1 untuk sinkronisasi opsional.
+6. Jangan mengakses/login/menyimpan PIN/OTP/password DANA, SUPERBANK, bank, OrderKuota atau layanan pihak ketiga.
+7. Gunakan Capacitor untuk Android.
+8. Package ID: com.warungendogyati.kasir
+9. App name: Warung Endog Yati
+10. Buat launcher icon Android dari logo resmi. Gunakan adaptive icon jika memungkinkan.
+11. Pastikan tombol Back Android bekerja.
+12. Build sampai menghasilkan APK release bernama `Warung-Endog-Yati.apk`.
+13. Jika ada error build, perbaiki dan ulangi sampai berhasil.
+14. Jangan berhenti hanya pada source code. Saya membutuhkan APK hasil build.
+
+Perbaiki juga logika akuntansi:
+- Saldo layanan tidak boleh negatif.
+- Nominal pokok transaksi dipisahkan dari biaya/admin.
+- Admin dicatat sebagai pendapatan/laba.
+- Kas fisik dan saldo layanan adalah akun berbeda.
+- Setiap mutasi mempunyai tanggal dan jam.
+- Laporan harian, mingguan, bulanan, dan custom.
+- PDF A4 untuk laporan.

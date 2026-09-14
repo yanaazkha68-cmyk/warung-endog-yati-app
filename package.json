@@ -1,0 +1,31 @@
+{
+  "name": "warung-endog-yati",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "assets:generate": "capacitor-assets generate --android",
+    "cap:add:android": "npx cap add android",
+    "cap:sync": "npx cap sync",
+    "cap:android": "npx cap open android",
+    "android:debug": "cd android && ./gradlew assembleDebug",
+    "android:release": "cd android && ./gradlew assembleRelease"
+  },
+  "dependencies": {
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/app": "^7.0.0",
+    "@capacitor/filesystem": "^7.0.0",
+    "@capacitor/share": "^7.0.0",
+    "@capacitor/status-bar": "^7.0.0",
+    "@capacitor/splash-screen": "^7.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.0.0",
+    "@capacitor/assets": "^3.0.5",
+    "vite": "^6.0.0"
+  }
+}
